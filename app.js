@@ -62,19 +62,22 @@ const fragmentShader = `
     float rim = pow(1.0 - max(dot(n, vec3(0.0, 0.0, 1.0)), 0.0), 2.0);
     float softDrift = 0.5 + 0.5 * sin(uTime * 0.22 + vPosition.y * 2.1);
 
-    vec3 cyan = vec3(0.30, 0.88, 0.88);
-    vec3 emerald = vec3(0.035, 0.70, 0.46);
-    vec3 gold = vec3(1.00, 0.77, 0.30);
+    vec3 cyan = vec3(0.18, 0.96, 0.96);
+    vec3 emerald = vec3(0.02, 0.82, 0.52);
+    vec3 gold = vec3(1.00, 0.78, 0.28);
 
-    vec3 body = mix(cyan, emerald, 0.42 + 0.14 * softDrift);
-    body = mix(body, cyan, rim * 0.42);
-    body = mix(body, gold, goldHalo * 0.56);
+    // Keep the body unmistakably present. The focus changes the field; it does not
+    // replace the body with a tiny floating light.
+    vec3 body = mix(cyan, emerald, 0.34 + 0.16 * softDrift);
+    body = mix(body, cyan, rim * 0.58);
+    body = mix(body, gold, goldHalo * 0.42);
     body = mix(body, gold, goldField);
 
-    float surface = 0.78 + 0.22 * max(dot(n, vec3(-0.25, 0.35, 0.92)), 0.0);
-    float brightness = surface * (0.92 + uEnergy * 0.28 + uBreath * 0.08);
+    float facing = max(dot(n, vec3(-0.18, 0.22, 0.96)), 0.0);
+    float surface = 0.72 + 0.38 * facing;
+    float brightness = surface * (1.10 + uEnergy * 0.38 + uBreath * 0.10);
 
-    gl_FragColor = vec4(body * brightness, 0.96);
+    gl_FragColor = vec4(body * brightness, 1.0);
   }
 `;
 
@@ -110,8 +113,8 @@ root.add(halo);
 
 // Rings are geometry, so speaking can disturb only a local section.
 const ringGroups = [
-  makeRing(1.10, 0.84, -0.23, 0.62),
-  makeRing(1.17, 0.90, 0.30, 0.34)
+  makeRing(1.10, 0.84, -0.23, 0.72),
+  makeRing(1.17, 0.90, 0.30, 0.44)
 ];
 
 function makeRing(radiusX, radiusY, z, baseOpacity) {
@@ -119,7 +122,7 @@ function makeRing(radiusX, radiusY, z, baseOpacity) {
   const positions = new Float32Array(count * 3);
   const geometry = new THREE.BufferGeometry();
   const material = new THREE.LineBasicMaterial({
-    color: 0x8df7ee,
+    color: 0x9afff5,
     transparent: true,
     opacity: baseOpacity
   });
