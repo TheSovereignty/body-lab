@@ -4,7 +4,6 @@
   --cyan: #6ff7ff;
   --emerald: #20d69a;
   --gold: #ffd878;
-  --breath: 1;
 }
 
 * { box-sizing: border-box; }
@@ -32,100 +31,30 @@ body {
 }
 
 .orb-button {
-  width: min(54vw, 360px);
+  width: min(58vw, 390px);
   aspect-ratio: 1;
   position: relative;
   border: 0;
   padding: 0;
   background: transparent;
   cursor: pointer;
-  transform: scale(.96);
-  animation: breathe 7s ease-in-out infinite;
+  -webkit-tap-highlight-color: transparent;
   filter: drop-shadow(0 0 24px rgba(32, 214, 154, .18));
 }
 
-.orb-button:hover { filter: drop-shadow(0 0 34px rgba(111, 247, 255, .25)); }
+.orb-button:focus-visible {
+  outline: 1px solid rgba(111, 247, 255, .45);
+  outline-offset: 18px;
+  border-radius: 50%;
+}
 
-.orb-core,
-.orb-edge,
-.orb-glow,
-.orb-eye {
+#orb-canvas {
   position: absolute;
   inset: 0;
-  border-radius: 50%;
+  width: 100%;
+  height: 100%;
+  display: block;
   pointer-events: none;
-}
-
-.orb-core {
-  background:
-    radial-gradient(circle at 64% 35%,
-      rgba(255, 216, 120, 1) 0 4%,
-      rgba(255, 205, 96, .82) 7%,
-      rgba(46, 218, 157, .9) 25%,
-      rgba(22, 176, 128, .9) 45%,
-      rgba(24, 155, 151, .84) 62%,
-      rgba(76, 229, 211, .9) 79%,
-      rgba(111, 247, 255, .96) 100%);
-  box-shadow:
-    inset 0 0 30px rgba(111, 247, 255, .48),
-    inset -18px -12px 42px rgba(2, 32, 28, .28),
-    0 0 26px rgba(111, 247, 255, .2),
-    0 0 80px rgba(32, 214, 154, .14);
-}
-
-.orb-edge {
-  background: radial-gradient(circle, transparent 69%, rgba(111, 247, 255, .72) 94%, rgba(111, 247, 255, .96) 100%);
-  mix-blend-mode: screen;
-}
-
-.orb-glow {
-  inset: -11%;
-  background: radial-gradient(circle, rgba(32, 214, 154, .18), transparent 64%);
-  filter: blur(18px);
-  animation: glow 7s ease-in-out infinite;
-}
-
-.orb-eye {
-  inset: auto;
-  width: 8%;
-  height: 8%;
-  left: 64%;
-  top: 35%;
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  background: rgba(255, 216, 120, .98);
-  box-shadow:
-    0 0 8px rgba(255, 216, 120, .72),
-    0 0 18px rgba(255, 216, 120, .30);
-  transition:
-    left 2.2s cubic-bezier(.45, 0, .25, 1),
-    top 2.2s cubic-bezier(.45, 0, .25, 1),
-    width 1.4s ease,
-    height 1.4s ease,
-    filter 1.4s ease,
-    opacity 1.4s ease;
-  z-index: 2;
-}
-
-.ring {
-  position: absolute;
-  inset: -5%;
-  border: 1px solid rgba(111, 247, 255, .46);
-  border-radius: 50%;
-  pointer-events: none;
-  transform: scale(.93) rotate(-13deg);
-  opacity: .48;
-}
-
-.ring-one {
-  animation: ringBreath 7s ease-in-out infinite;
-}
-
-.ring-two {
-  inset: -9%;
-  border-color: rgba(255, 216, 120, .28);
-  transform: scale(.90) rotate(17deg);
-  animation: ringBreathTwo 7s ease-in-out .42s infinite;
 }
 
 .state {
@@ -137,106 +66,9 @@ body {
   letter-spacing: .22em;
   text-transform: uppercase;
   transition: color .5s ease;
-}
-
-.orb-button[data-state="listening"] .orb-eye {
-  animation: quest 8s ease-in-out infinite;
-}
-
-.orb-button[data-state="thinking"] .orb-eye {
-  left: 55%;
-  top: 49%;
-  width: 7%;
-  height: 7%;
-  animation: thinkDrift 5.5s ease-in-out infinite;
-}
-
-.orb-button[data-state="speaking"] .orb-eye {
-  left: 50%;
-  top: 50%;
-  width: 9%;
-  height: 9%;
-  filter: brightness(1.18);
-  animation: speakEye 1.8s ease-in-out infinite;
-}
-
-.orb-button[data-state="speaking"] .orb-core {
-  animation: activePulse 1.5s ease-in-out infinite;
-}
-
-.orb-button[data-state="speaking"] .ring-one {
-  animation: ringSpeakOne 1.9s ease-in-out infinite;
-}
-
-.orb-button[data-state="speaking"] .ring-two {
-  animation: ringSpeakTwo 2.35s ease-in-out infinite .22s;
-}
-
-.orb-button[data-state="returning"] {
-  animation-duration: 7s;
-}
-
-.orb-button[data-state="returning"] .orb-eye {
-  left: 64%;
-  top: 35%;
-  width: 8%;
-  height: 8%;
-  opacity: .72;
-}
-
-@keyframes breathe {
-  0%, 100% { transform: scale(.94); }
-  50% { transform: scale(1); }
-}
-
-@keyframes glow {
-  0%, 100% { opacity: .55; transform: scale(.92); }
-  50% { opacity: 1; transform: scale(1.08); }
-}
-
-@keyframes ringBreath {
-  0%, 100% { transform: scale(.91) rotate(-13deg); opacity: .34; }
-  50% { transform: scale(1.03) rotate(-13deg); opacity: .58; }
-}
-
-@keyframes ringBreathTwo {
-  0%, 100% { transform: scale(.88) rotate(17deg); opacity: .20; }
-  50% { transform: scale(1.05) rotate(17deg); opacity: .40; }
-}
-
-@keyframes quest {
-  0%, 18% { left: 62%; top: 36%; }
-  31%, 43% { left: 68%; top: 39%; }
-  55%, 66% { left: 61%; top: 43%; }
-  78%, 90% { left: 58%; top: 34%; }
-  100% { left: 62%; top: 36%; }
-}
-
-@keyframes thinkDrift {
-  0%, 100% { left: 55%; top: 49%; }
-  50% { left: 53%; top: 45%; }
-}
-
-@keyframes speakEye {
-  0%, 100% { filter: brightness(1.05); }
-  50% { filter: brightness(1.28); }
-}
-
-@keyframes ringSpeakOne {
-  0%, 100% { transform: scale(.93) rotate(-13deg); opacity: .42; }
-  50% { transform: scale(1.00) rotate(-13deg); opacity: .60; }
-}
-
-@keyframes ringSpeakTwo {
-  0%, 100% { transform: scale(.90) rotate(17deg); opacity: .18; }
-  50% { transform: scale(.96) rotate(17deg); opacity: .34; }
-}
-
-@keyframes activePulse {
-  0%, 100% { filter: brightness(1); }
-  50% { filter: brightness(1.22); }
+  user-select: none;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .orb-button, .orb-glow, .ring, .orb-core, .orb-eye { animation-duration: 12s; }
+  .orb-button { filter: none; }
 }
