@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="theme-color" content="#020706">
   <title>ORB — Body Lab</title>
   <link rel="stylesheet" href="./styles.css">
@@ -10,12 +10,7 @@
 <body>
   <main class="stage" aria-label="ORB Body Lab">
     <button class="orb-button" id="orb" aria-label="Touch ORB to change state">
-      <span class="orb-glow"></span>
-      <span class="orb-core"></span>
-      <span class="orb-eye" aria-hidden="true"></span>
-      <span class="orb-edge"></span>
-      <span class="ring ring-one"></span>
-      <span class="ring ring-two"></span>
+      <canvas id="orb-canvas" aria-hidden="true"></canvas>
     </button>
     <p class="state" id="state">resting</p>
   </main>
