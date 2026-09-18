@@ -1,20 +1,37 @@
 const orb = document.querySelector("#orb");
 const state = document.querySelector("#state");
 
-let active = false;
+const states = ["resting", "listening", "thinking", "speaking", "returning"];
+let stateIndex = 0;
+let returnTimer;
 
-orb.addEventListener("click", () => {
-  active = !active;
-  orb.classList.toggle("active", active);
-  state.textContent = active ? "listening" : "resting";
-  state.style.color = active
-    ? "rgba(220, 255, 248, .72)"
-    : "rgba(220, 255, 248, .38)";
-});
+function setState(nextState) {
+  clearTimeout(returnTimer);
+  stateIndex = states.indexOf(nextState);
+  orb.dataset.state = nextState;
+  orb.classList.toggle("active", nextState === "speaking");
+  state.textContent = nextState;
+  state.style.color = nextState === "resting"
+    ? "rgba(220, 255, 248, .38)"
+    : "rgba(220, 255, 248, .72)";
+
+  if (nextState === "returning") {
+    returnTimer = setTimeout(() => setState("resting"), 5200);
+  }
+}
+
+function advanceState() {
+  const nextIndex = (stateIndex + 1) % states.length;
+  setState(states[nextIndex]);
+}
+
+orb.addEventListener("click", advanceState);
 
 orb.addEventListener("keydown", (event) => {
   if (event.key === "Enter" || event.key === " ") {
     event.preventDefault();
-    orb.click();
+    advanceState();
   }
 });
+
+setState("resting");
