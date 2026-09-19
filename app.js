@@ -113,11 +113,11 @@ root.add(halo);
 
 // Rings are geometry, so speaking can disturb only a local section.
 const ringGroups = [
-  makeRing(1.10, 0.84, -0.23, 0.72),
-  makeRing(1.17, 0.90, 0.30, 0.44)
+  makeRing(1.10, 0.84, -0.23, 0.72, 0.00),
+  makeRing(1.17, 0.90, 0.30, 0.44, 0.34)
 ];
 
-function makeRing(radiusX, radiusY, z, baseOpacity) {
+function makeRing(radiusX, radiusY, z, baseOpacity, rotationY) {
   const count = 240;
   const positions = new Float32Array(count * 3);
   const geometry = new THREE.BufferGeometry();
@@ -129,6 +129,7 @@ function makeRing(radiusX, radiusY, z, baseOpacity) {
 
   geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
   const line = new THREE.LineLoop(geometry, material);
+  line.rotation.y = rotationY;
   line.userData = { count, radiusX, radiusY, z, baseOpacity };
   root.add(line);
   return line;
@@ -140,12 +141,12 @@ function updateRing(line, time, ringIndex) {
   const speaking = currentState === "speaking";
   const wavePhase = time * (1.15 + ringIndex * 0.22) + ringIndex * 2.6;
   const packetCenter = ((wavePhase % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-  const strength = speaking ? (0.008 + 0.015 * (0.5 + 0.5 * Math.sin(time * 4.7 + ringIndex))) : 0;
+  const strength = speaking ? (0.016 + 0.022 * (0.5 + 0.5 * Math.sin(time * 4.7 + ringIndex))) : 0;
 
   for (let i = 0; i < count; i++) {
     const a = (i / count) * Math.PI * 2;
     let delta = Math.atan2(Math.sin(a - packetCenter), Math.cos(a - packetCenter));
-    let packet = Math.exp(-(delta * delta) / 0.055);
+    let packet = Math.exp(-(delta * delta) / 0.075);
     let wave = Math.sin(delta * 16.0 - time * 9.0) * packet * strength;
     let secondary = Math.sin(delta * 7.0 + time * 5.0) * packet * strength * 0.22;
     let r = 1.0 + wave + secondary;
@@ -177,8 +178,8 @@ function focusForState(time) {
 
   if (currentState === "listening") {
     // Slow, irregular attention shifts: the whole light field follows.
-    const x = 0.24 + Math.sin(time * 0.47) * 0.12 + Math.sin(time * 0.19 + 1.7) * 0.08;
-    const y = 0.27 + Math.sin(time * 0.61 + 0.8) * 0.09 + Math.sin(time * 0.31) * 0.05;
+    const x = 0.24 + Math.sin(time * 0.47) * 0.19 + Math.sin(time * 0.19 + 1.7) * 0.12;
+    const y = 0.27 + Math.sin(time * 0.61 + 0.8) * 0.14 + Math.sin(time * 0.31) * 0.08;
     return new THREE.Vector3(x, y, 1).normalize();
   }
 
