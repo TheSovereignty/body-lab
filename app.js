@@ -20,7 +20,7 @@ renderer.setClearColor(0x000000, 0);
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(28, 1, 0.1, 100);
-camera.position.set(0, 0, 4.2);
+camera.position.set(0, 0, 8.4);
 
 const clock = new THREE.Clock();
 const root = new THREE.Group();
@@ -258,7 +258,7 @@ button.addEventListener("keydown", (event) => {
 });
 
 function resize() {
-  const rect = button.getBoundingClientRect();
+  const rect = canvas.getBoundingClientRect();
   const width = Math.max(1, rect.width);
   const height = Math.max(1, rect.height);
   renderer.setSize(width, height, false);
