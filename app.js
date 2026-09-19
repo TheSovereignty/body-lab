@@ -11,6 +11,7 @@ let currentState = "resting";
 let previousState = "resting";
 let stateTransition = 1;
 const stateTransitionDuration = 2.4;
+const speakingEntranceDuration = 1.8;
 let returnTimer;
 let conversation = null;
 let conversationStatus = "disconnected";
@@ -199,7 +200,7 @@ function updateRing(line, time, ringIndex) {
     getVisualValue("speaking", 0.12) +
     getVisualValue("returning", 0.055);
 
-  const speakingAmount = getVisualAmount("speaking");
+  const speakingAmount = getSpeakingVisualAmount(time);
   const ringScale =
     1.0 +
     stateExpansion +
@@ -249,6 +250,13 @@ function getVisualAmount(state) {
 
 function getVisualValue(state, value) {
   return value * getVisualAmount(state);
+}
+
+function getSpeakingVisualAmount(time) {
+  const entrance = currentState === "speaking"
+    ? smoothstep(Math.min(1, (time - stateStarted) / speakingEntranceDuration))
+    : 1;
+  return getVisualAmount("speaking") * entrance;
 }
 
 function setState(next) {
@@ -388,7 +396,7 @@ function animate() {
 
   // Physical body: one breathing volume, not layered DOM circles.
   let scale = 0.94 + breath * 0.06;
-  const speakingAmount = getVisualAmount("speaking");
+  const speakingAmount = getSpeakingVisualAmount(time);
   if (speakingAmount > 0.01) {
     const voicePulse = 0.5 + 0.5 * Math.sin(time * 5.2) * (0.5 + 0.5 * Math.sin(time * 2.1));
     scale += speakingAmount * voicePulse * 0.006;
@@ -396,9 +404,10 @@ function animate() {
   root.scale.setScalar(scale);
 
   const targetFocus = focusForState(time);
-  orbMaterial.uniforms.uFocus.value.lerp(targetFocus, 0.045);
+  const focusLerp = currentState === "speaking" ? 0.028 : 0.045;
+  orbMaterial.uniforms.uFocus.value.lerp(targetFocus, focusLerp);
 
-  if (conversation && getVisualAmount("speaking") > 0.5) {
+  if (conversation && speakingAmount > 0.5) {
     const output = conversation.getOutputByteFrequencyData();
     if (output && output.length) {
       let sum = 0;
@@ -412,7 +421,7 @@ function animate() {
     voiceEnergy *= 0.86;
   }
 
-  const speakingVisual = getVisualAmount("speaking");
+  const speakingVisual = speakingAmount;
   const listeningVisual = getVisualAmount("listening");
   const thinkingVisual = getVisualAmount("thinking");
   const targetEnergy =
