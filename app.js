@@ -118,7 +118,7 @@ const ringGroups = [
 ];
 
 function makeRing(radiusX, radiusY, z, baseOpacity, rotationY) {
-  const count = 240;
+  const count = 512;
   const positions = new Float32Array(count * 3);
   const geometry = new THREE.BufferGeometry();
   const material = new THREE.LineBasicMaterial({
@@ -161,6 +161,18 @@ function updateRing(line, time, ringIndex) {
   line.geometry.attributes.position.needsUpdate = true;
 
   const breathing = 0.5 + 0.5 * Math.sin(time * (Math.PI * 2 / 7) + ringIndex * 0.38);
+  const stateExpansion =
+    currentState === "listening" ? 0.045 :
+    currentState === "thinking" ? 0.075 :
+    currentState === "speaking" ? 0.11 :
+    currentState === "returning" ? 0.06 :
+    0.0;
+  const voiceExpansion = speaking
+    ? 0.028 * (0.5 + 0.5 * Math.sin(time * 5.2 + ringIndex))
+    : 0.0;
+  const ringScale = 1.0 + stateExpansion + breathing * 0.055 + voiceExpansion;
+  line.scale.set(ringScale, ringScale, 1);
+
   const targetOpacity = baseOpacity * (0.82 + breathing * 0.22);
   line.material.opacity = speaking
     ? targetOpacity + 0.08
