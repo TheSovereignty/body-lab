@@ -115,11 +115,11 @@ root.add(halo);
 // They live outside the orb's body and carry the same localized vibration,
 // while their overall scale breathes with the ORB.
 const ringGroups = [
-  makeRing(1.18, 0.10, 0.72),
-  makeRing(1.30, 0.08, 0.44)
+  makeRing(1.28, 0.72, 0.00),
+  makeRing(1.48, 0.44, 0.00)
 ];
 
-function makeRing(radius, z, baseOpacity) {
+function makeRing(radius, baseOpacity, phaseOffset) {
   const count = 512;
   const positions = new Float32Array(count * 3);
   const geometry = new THREE.BufferGeometry();
@@ -135,13 +135,13 @@ function makeRing(radius, z, baseOpacity) {
 
   const line = new THREE.LineLoop(geometry, material);
   line.renderOrder = 10;
-  line.userData = { count, radius, z, baseOpacity };
+  line.userData = { count, radius, baseOpacity, phaseOffset };
   root.add(line);
   return line;
 }
 
 function updateRing(line, time, ringIndex) {
-  const { count, radius, z, baseOpacity } = line.userData;
+  const { count, radius, baseOpacity, phaseOffset } = line.userData;
   const positions = line.geometry.attributes.position.array;
   const speaking = currentState === "speaking";
 
@@ -165,7 +165,7 @@ function updateRing(line, time, ringIndex) {
 
     positions[i * 3] = Math.cos(a) * radius * r;
     positions[i * 3 + 1] = Math.sin(a) * radius * r;
-    positions[i * 3 + 2] = z;
+    positions[i * 3 + 2] = 0;
   }
 
   line.geometry.attributes.position.needsUpdate = true;
@@ -173,7 +173,7 @@ function updateRing(line, time, ringIndex) {
   // The rings breathe independently of the orb's surface, giving them
   // visible space and a clear relationship to the body's own breathing.
   const breath = 0.5 + 0.5 * Math.sin(
-    time * (Math.PI * 2 / 7) + ringIndex * 0.38
+    time * (Math.PI * 2 / 7) + phaseOffset
   );
   const stateExpansion =
     currentState === "listening" ? 0.035 :
@@ -185,7 +185,7 @@ function updateRing(line, time, ringIndex) {
   const ringScale =
     1.0 +
     stateExpansion +
-    breath * 0.045 +
+    breath * 0.075 +
     (speaking
       ? 0.028 * (0.5 + 0.5 * Math.sin(time * 5.2 + ringIndex))
       : 0);
