@@ -113,8 +113,8 @@ root.add(halo);
 
 // Rings are geometry, so speaking can disturb only a local section.
 const ringGroups = [
-  makeRing(1.10, 0.84, -0.23, 0.72, 0.00),
-  makeRing(1.17, 0.90, 0.30, 0.44, 0.34)
+  makeRing(1.10, 0.84, 0.00, 0.72, 0.00),
+  makeRing(1.17, 0.90, 0.00, 0.44, 0.00)
 ];
 
 function makeRing(radiusX, radiusY, z, baseOpacity, rotationY) {
@@ -124,13 +124,15 @@ function makeRing(radiusX, radiusY, z, baseOpacity, rotationY) {
   const material = new THREE.LineBasicMaterial({
     color: 0x9afff5,
     transparent: true,
-    opacity: baseOpacity
+    opacity: baseOpacity,
+    depthTest: false,
+    depthWrite: false
   });
 
   geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
   const line = new THREE.LineLoop(geometry, material);
   line.rotation.y = rotationY;
-  line.userData = { count, radiusX, radiusY, z, baseOpacity };
+  line.userData = { count, radiusX, radiusY, z, baseOpacity, rotationY };
   root.add(line);
   return line;
 }
