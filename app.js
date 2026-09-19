@@ -177,9 +177,13 @@ function updateRing(line, time, ringIndex) {
 
   line.geometry.attributes.position.needsUpdate = true;
 
-  // Breath cascades outward: inner ring leads, outer ring follows.
+  // Breath cascades outward from the body: body → inner ring → outer ring.
+  // The phase offsets are deliberately large enough to read as a sequence.
+  const breathPeriod = 7;
+  const cascadeDelay = 0.95;
   const breath = 0.5 + 0.5 * Math.sin(
-    time * (Math.PI * 2 / 7) + phaseOffset
+    time * (Math.PI * 2 / breathPeriod) -
+    (ringIndex + 1) * cascadeDelay * (Math.PI * 2 / breathPeriod)
   );
 
   const stateExpansion =
