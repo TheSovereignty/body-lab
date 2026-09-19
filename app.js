@@ -253,17 +253,24 @@ function getVisualValue(state, value) {
 }
 
 function getSpeakingVisualAmount(time) {
-  const entrance = currentState === "speaking"
-    ? smoothstep(Math.min(1, (time - stateStarted) / speakingEntranceDuration))
-    : 1;
-  return getVisualAmount("speaking") * entrance;
+  if (currentState === "speaking" && previousState === "listening") {
+    return smoothstep(Math.min(1, (time - stateStarted) / speakingEntranceDuration));
+  }
+  if (currentState === "speaking") {
+    return getVisualAmount("speaking");
+  }
+  return 0;
 }
 
 function setState(next) {
   clearTimeout(returnTimer);
   if (next !== currentState) {
-    previousState = currentState;
-    stateTransition = 0;
+    // Listening → speaking is a continuous arrival, not a new state animation.
+    // Keep the listening visual in place while speaking-specific behavior eases in.
+    if (currentState !== "listening" || next !== "speaking") {
+      previousState = currentState;
+      stateTransition = 0;
+    }
   }
   currentState = next;
   stateIndex = states.indexOf(next);
@@ -404,7 +411,7 @@ function animate() {
   root.scale.setScalar(scale);
 
   const targetFocus = focusForState(time);
-  const focusLerp = currentState === "speaking" ? 0.028 : 0.045;
+  const focusLerp = currentState === "speaking" && previousState !== "listening" ? 0.028 : 0.045;
   orbMaterial.uniforms.uFocus.value.lerp(targetFocus, focusLerp);
 
   if (conversation && speakingAmount > 0.5) {
@@ -422,7 +429,9 @@ function animate() {
   }
 
   const speakingVisual = speakingAmount;
-  const listeningVisual = getVisualAmount("listening");
+  const listeningVisual = currentState === "speaking" && previousState === "listening"
+    ? 1
+    : getVisualAmount("listening");
   const thinkingVisual = getVisualAmount("thinking");
   const targetEnergy =
     speakingVisual * (0.30 + Math.min(0.42, voiceEnergy / 170)) +
