@@ -1,13 +1,17 @@
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.180.0/build/three.module.js";
+import { Conversation } from "https://cdn.jsdelivr.net/npm/@elevenlabs/client@0.14.0/+esm";
 
 const button = document.querySelector("#orb");
 const canvas = document.querySelector("#orb-canvas");
 const stateLabel = document.querySelector("#state");
 
-const states = ["resting", "listening", "thinking", "speaking", "returning"];
+const states = ["resting", "connecting", "listening", "thinking", "speaking", "returning"];
 let stateIndex = 0;
 let currentState = "resting";
 let returnTimer;
+let conversation = null;
+let conversationStatus = "disconnected";
+let voiceEnergy = 0;
 
 const renderer = new THREE.WebGLRenderer({
   canvas,
@@ -156,7 +160,7 @@ function updateRing(line, time, ringIndex) {
   const wavePhase = time * (1.15 + ringIndex * 0.22) + ringIndex * 2.6;
   const packetCenter = ((wavePhase % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
   const strength = speaking
-    ? (0.020 + 0.018 * (0.5 + 0.5 * Math.sin(time * 4.7 + ringIndex)))
+    ? 0.018 + Math.min(0.034, voiceEnergy * 0.00010)
     : 0;
 
   for (let i = 0; i < count; i++) {
@@ -196,7 +200,7 @@ function updateRing(line, time, ringIndex) {
   const ringScale =
     1.0 +
     stateExpansion +
-    breath * 0.075 +
+    breath * 0.14 +
     (speaking
       ? 0.028 * (0.5 + 0.5 * Math.sin(time * 5.2 + ringIndex))
       : 0);
@@ -239,6 +243,12 @@ function setState(next) {
   stateIndex = states.indexOf(next);
   stateStarted = clock.getElapsedTime();
   button.dataset.state = next;
+  button.setAttribute("aria-label",
+    next === "resting" ? "Touch ORB to begin" :
+    next === "connecting" ? "Connecting to ORB" :
+    next === "returning" ? "ORB is returning" :
+    "Touch ORB to end the conversation"
+  );
   stateLabel.textContent = next;
   stateLabel.style.color = next === "resting"
     ? "rgba(220, 255, 248, .38)"
@@ -249,15 +259,89 @@ function setState(next) {
   }
 }
 
-function advanceState() {
-  setState(states[(stateIndex + 1) % states.length]);
+async function startConversation() {
+  if (conversation) return;
+
+  setState("connecting");
+
+  try {
+    await navigator.mediaDevices.getUserMedia({ audio: true });
+
+    conversation = await Conversation.startSession({
+      agentId: "agent_1501kw5m24g5fqz9k547ztzen171",
+
+      onConnect: () => {
+        conversationStatus = "connected";
+        setState("listening");
+      },
+
+      onDisconnect: () => {
+        conversationStatus = "disconnected";
+        conversation = null;
+        voiceEnergy = 0;
+        setState("returning");
+      },
+
+      onError: (error) => {
+        console.error("ORB conversation error:", error);
+        conversationStatus = "disconnected";
+        conversation = null;
+        voiceEnergy = 0;
+        setState("returning");
+      },
+
+      onStatusChange: ({ status }) => {
+        conversationStatus = status;
+        if (status === "connecting") setState("connecting");
+      },
+
+      onModeChange: ({ mode }) => {
+        if (mode === "speaking") {
+          setState("speaking");
+        } else if (mode === "listening") {
+          setState("listening");
+        }
+      }
+    });
+  } catch (error) {
+    console.error("ORB could not start conversation:", error);
+    conversationStatus = "disconnected";
+    conversation = null;
+    voiceEnergy = 0;
+    setState("returning");
+  }
 }
 
-button.addEventListener("click", advanceState);
-button.addEventListener("keydown", (event) => {
+async function endConversation() {
+  if (!conversation) return;
+  const activeConversation = conversation;
+  conversation = null;
+  conversationStatus = "disconnected";
+  voiceEnergy = 0;
+  try {
+    await activeConversation.endSession();
+  } catch (error) {
+    console.error("ORB could not end conversation:", error);
+  }
+  setState("returning");
+}
+
+button.addEventListener("click", async () => {
+  if (conversationStatus === "connected") {
+    await endConversation();
+  } else if (conversationStatus === "disconnected") {
+    await startConversation();
+  }
+});
+
+button.addEventListener("keydown", async (event) => {
   if (event.key === "Enter" || event.key === " ") {
     event.preventDefault();
-    advanceState();
+    if (conversationStatus === "connected") {
+      await endConversation();
+    } else if (conversationStatus === "disconnected") {
+      await startConversation();
+    }
   }
 });
 
@@ -291,9 +375,23 @@ function animate() {
   const targetFocus = focusForState(time);
   orbMaterial.uniforms.uFocus.value.lerp(targetFocus, 0.045);
 
+  if (conversation && currentState === "speaking") {
+    const output = conversation.getOutputByteFrequencyData();
+    if (output && output.length) {
+      let sum = 0;
+      for (let i = 0; i < output.length; i++) {
+        sum += output[i] * output[i];
+      }
+      const rms = Math.sqrt(sum / output.length);
+      voiceEnergy += (rms - voiceEnergy) * 0.28;
+    }
+  } else {
+    voiceEnergy *= 0.86;
+  }
+
   const targetEnergy =
     currentState === "speaking"
-      ? 0.35 + 0.28 * (0.5 + 0.5 * Math.sin(time * 5.0)) + 0.12 * (0.5 + 0.5 * Math.sin(time * 2.2))
+      ? 0.30 + Math.min(0.42, voiceEnergy / 170)
       : currentState === "listening"
         ? 0.07
         : currentState === "thinking"
