@@ -111,18 +111,27 @@ const halo = new THREE.Mesh(
 );
 root.add(halo);
 
-// Rings: rebuilt as simple, continuous front-facing elliptical loops.
-// They live outside the orb's body and carry the same localized vibration,
-// while their overall scale breathes with the ORB.
+// Rings: two complete circular orbits around the ORB.
+// They are independent of the sphere's surface and remain visibly separate.
 const ringGroups = [
   makeRing(1.28, 0.72, 0.00),
-  makeRing(1.48, 0.44, 0.00)
+  makeRing(1.50, 0.44, 0.0)
 ];
 
 function makeRing(radius, baseOpacity, phaseOffset) {
-  const count = 512;
+  const count = 720;
   const positions = new Float32Array(count * 3);
+
+  for (let i = 0; i < count; i++) {
+    const a = (i / count) * Math.PI * 2;
+    positions[i * 3] = Math.cos(a) * radius;
+    positions[i * 3 + 1] = Math.sin(a) * radius;
+    positions[i * 3 + 2] = 0;
+  }
+
   const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+
   const material = new THREE.LineBasicMaterial({
     color: 0x9afff5,
     transparent: true,
@@ -130,8 +139,6 @@ function makeRing(radius, baseOpacity, phaseOffset) {
     depthTest: false,
     depthWrite: false
   });
-
-  geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
 
   const line = new THREE.LineLoop(geometry, material);
   line.renderOrder = 10;
@@ -145,7 +152,7 @@ function updateRing(line, time, ringIndex) {
   const positions = line.geometry.attributes.position.array;
   const speaking = currentState === "speaking";
 
-  // Preserve the successful tight traveling vibration from the previous build.
+  // Preserve the successful localized vibration, but never break the closed loop.
   const wavePhase = time * (1.15 + ringIndex * 0.22) + ringIndex * 2.6;
   const packetCenter = ((wavePhase % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
   const strength = speaking
@@ -161,20 +168,20 @@ function updateRing(line, time, ringIndex) {
     const packet = Math.exp(-(delta * delta) / 0.030);
     const wave = Math.sin(delta * 30.0 - time * 12.0) * packet * strength;
     const secondary = Math.sin(delta * 14.0 + time * 7.0) * packet * strength * 0.16;
-    const r = 1.0 + wave + secondary;
+    const r = radius * (1.0 + wave + secondary);
 
-    positions[i * 3] = Math.cos(a) * radius * r;
-    positions[i * 3 + 1] = Math.sin(a) * radius * r;
+    positions[i * 3] = Math.cos(a) * r;
+    positions[i * 3 + 1] = Math.sin(a) * r;
     positions[i * 3 + 2] = 0;
   }
 
   line.geometry.attributes.position.needsUpdate = true;
 
-  // The rings breathe independently of the orb's surface, giving them
-  // visible space and a clear relationship to the body's own breathing.
+  // Breath cascades outward: inner ring leads, outer ring follows.
   const breath = 0.5 + 0.5 * Math.sin(
     time * (Math.PI * 2 / 7) + phaseOffset
   );
+
   const stateExpansion =
     currentState === "listening" ? 0.035 :
     currentState === "thinking" ? 0.075 :
