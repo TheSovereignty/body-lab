@@ -111,13 +111,15 @@ const halo = new THREE.Mesh(
 );
 root.add(halo);
 
-// Rings are geometry, so speaking can disturb only a local section.
+// Rings: rebuilt as simple, continuous front-facing elliptical loops.
+// They live outside the orb's body and carry the same localized vibration,
+// while their overall scale breathes with the ORB.
 const ringGroups = [
-  makeRing(1.10, 0.84, 0.00, 0.72, 0.00),
-  makeRing(1.17, 0.90, 0.00, 0.44, 0.00)
+  makeRing(1.34, 0.82, 0.10, 0.72),
+  makeRing(1.50, 0.94, 0.08, 0.44)
 ];
 
-function makeRing(radiusX, radiusY, z, baseOpacity, rotationY) {
+function makeRing(radiusX, radiusY, z, baseOpacity) {
   const count = 512;
   const positions = new Float32Array(count * 3);
   const geometry = new THREE.BufferGeometry();
@@ -130,9 +132,10 @@ function makeRing(radiusX, radiusY, z, baseOpacity, rotationY) {
   });
 
   geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+
   const line = new THREE.LineLoop(geometry, material);
-  line.rotation.y = rotationY;
-  line.userData = { count, radiusX, radiusY, z, baseOpacity, rotationY };
+  line.renderOrder = 10;
+  line.userData = { count, radiusX, radiusY, z, baseOpacity };
   root.add(line);
   return line;
 }
@@ -141,17 +144,24 @@ function updateRing(line, time, ringIndex) {
   const { count, radiusX, radiusY, z, baseOpacity } = line.userData;
   const positions = line.geometry.attributes.position.array;
   const speaking = currentState === "speaking";
+
+  // Preserve the successful tight traveling vibration from the previous build.
   const wavePhase = time * (1.15 + ringIndex * 0.22) + ringIndex * 2.6;
   const packetCenter = ((wavePhase % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-  const strength = speaking ? (0.020 + 0.018 * (0.5 + 0.5 * Math.sin(time * 4.7 + ringIndex))) : 0;
+  const strength = speaking
+    ? (0.020 + 0.018 * (0.5 + 0.5 * Math.sin(time * 4.7 + ringIndex)))
+    : 0;
 
   for (let i = 0; i < count; i++) {
     const a = (i / count) * Math.PI * 2;
-    let delta = Math.atan2(Math.sin(a - packetCenter), Math.cos(a - packetCenter));
-    let packet = Math.exp(-(delta * delta) / 0.030);
-    let wave = Math.sin(delta * 30.0 - time * 12.0) * packet * strength;
-    let secondary = Math.sin(delta * 14.0 + time * 7.0) * packet * strength * 0.16;
-    let r = 1.0 + wave + secondary;
+    const delta = Math.atan2(
+      Math.sin(a - packetCenter),
+      Math.cos(a - packetCenter)
+    );
+    const packet = Math.exp(-(delta * delta) / 0.030);
+    const wave = Math.sin(delta * 30.0 - time * 12.0) * packet * strength;
+    const secondary = Math.sin(delta * 14.0 + time * 7.0) * packet * strength * 0.16;
+    const r = 1.0 + wave + secondary;
 
     positions[i * 3] = Math.cos(a) * radiusX * r;
     positions[i * 3 + 1] = Math.sin(a) * radiusY * r;
@@ -160,20 +170,29 @@ function updateRing(line, time, ringIndex) {
 
   line.geometry.attributes.position.needsUpdate = true;
 
-  const breathing = 0.5 + 0.5 * Math.sin(time * (Math.PI * 2 / 7) + ringIndex * 0.38);
+  // The rings breathe independently of the orb's surface, giving them
+  // visible space and a clear relationship to the body's own breathing.
+  const breath = 0.5 + 0.5 * Math.sin(
+    time * (Math.PI * 2 / 7) + ringIndex * 0.38
+  );
   const stateExpansion =
-    currentState === "listening" ? 0.045 :
+    currentState === "listening" ? 0.035 :
     currentState === "thinking" ? 0.075 :
-    currentState === "speaking" ? 0.11 :
-    currentState === "returning" ? 0.06 :
+    currentState === "speaking" ? 0.12 :
+    currentState === "returning" ? 0.055 :
     0.0;
-  const voiceExpansion = speaking
-    ? 0.028 * (0.5 + 0.5 * Math.sin(time * 5.2 + ringIndex))
-    : 0.0;
-  const ringScale = 1.0 + stateExpansion + breathing * 0.055 + voiceExpansion;
+
+  const ringScale =
+    1.0 +
+    stateExpansion +
+    breath * 0.045 +
+    (speaking
+      ? 0.028 * (0.5 + 0.5 * Math.sin(time * 5.2 + ringIndex))
+      : 0);
+
   line.scale.set(ringScale, ringScale, 1);
 
-  const targetOpacity = baseOpacity * (0.82 + breathing * 0.22);
+  const targetOpacity = baseOpacity * (0.82 + breath * 0.22);
   line.material.opacity = speaking
     ? targetOpacity + 0.08
     : targetOpacity;
