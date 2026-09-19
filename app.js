@@ -8,6 +8,9 @@ const stateLabel = document.querySelector("#state");
 const states = ["resting", "connecting", "listening", "thinking", "speaking", "returning"];
 let stateIndex = 0;
 let currentState = "resting";
+let previousState = "resting";
+let stateTransition = 1;
+const stateTransitionDuration = 1.15;
 let returnTimer;
 let conversation = null;
 let conversationStatus = "disconnected";
@@ -154,7 +157,7 @@ function makeRing(radius, baseOpacity, phaseOffset) {
 function updateRing(line, time, ringIndex) {
   const { count, radius, baseOpacity, phaseOffset } = line.userData;
   const positions = line.geometry.attributes.position.array;
-  const speaking = currentState === "speaking";
+  const speaking = getVisualAmount("speaking") > 0.01;
 
   // Preserve the successful localized vibration, but never break the closed loop.
   const wavePhase = time * (1.15 + ringIndex * 0.22) + ringIndex * 2.6;
@@ -191,26 +194,22 @@ function updateRing(line, time, ringIndex) {
   );
 
   const stateExpansion =
-    currentState === "listening" ? 0.035 :
-    currentState === "thinking" ? 0.075 :
-    currentState === "speaking" ? 0.12 :
-    currentState === "returning" ? 0.055 :
-    0.0;
+    getVisualValue("listening", 0.035) +
+    getVisualValue("thinking", 0.075) +
+    getVisualValue("speaking", 0.12) +
+    getVisualValue("returning", 0.055);
 
+  const speakingAmount = getVisualAmount("speaking");
   const ringScale =
     1.0 +
     stateExpansion +
     breath * 0.14 +
-    (speaking
-      ? 0.028 * (0.5 + 0.5 * Math.sin(time * 5.2 + ringIndex))
-      : 0);
+    speakingAmount * 0.028 * (0.5 + 0.5 * Math.sin(time * 5.2 + ringIndex));
 
   line.scale.set(ringScale, ringScale, 1);
 
   const targetOpacity = baseOpacity * (0.82 + breath * 0.22);
-  line.material.opacity = speaking
-    ? targetOpacity + 0.08
-    : targetOpacity;
+  line.material.opacity = targetOpacity + speakingAmount * 0.08;
 }
 
 function focusForState(time) {
@@ -237,8 +236,27 @@ function focusForState(time) {
 
 let stateStarted = 0;
 
+function smoothstep(t) {
+  return t * t * (3 - 2 * t);
+}
+
+function getVisualAmount(state) {
+  const t = smoothstep(Math.min(1, stateTransition / stateTransitionDuration));
+  const from = previousState === state ? 1 : 0;
+  const to = currentState === state ? 1 : 0;
+  return THREE.MathUtils.lerp(from, to, t);
+}
+
+function getVisualValue(state, value) {
+  return value * getVisualAmount(state);
+}
+
 function setState(next) {
   clearTimeout(returnTimer);
+  if (next !== currentState) {
+    previousState = currentState;
+    stateTransition = 0;
+  }
   currentState = next;
   stateIndex = states.indexOf(next);
   stateStarted = clock.getElapsedTime();
@@ -364,18 +382,23 @@ function animate() {
   const time = clock.getElapsedTime();
   const breath = 0.5 + 0.5 * Math.sin(time * (Math.PI * 2 / 7) - Math.PI / 2);
 
+  if (stateTransition < stateTransitionDuration) {
+    stateTransition += 1 / 60;
+  }
+
   // Physical body: one breathing volume, not layered DOM circles.
   let scale = 0.94 + breath * 0.06;
-  if (currentState === "speaking") {
+  const speakingAmount = getVisualAmount("speaking");
+  if (speakingAmount > 0.01) {
     const voicePulse = 0.5 + 0.5 * Math.sin(time * 5.2) * (0.5 + 0.5 * Math.sin(time * 2.1));
-    scale += voicePulse * 0.006;
+    scale += speakingAmount * voicePulse * 0.006;
   }
   root.scale.setScalar(scale);
 
   const targetFocus = focusForState(time);
   orbMaterial.uniforms.uFocus.value.lerp(targetFocus, 0.045);
 
-  if (conversation && currentState === "speaking") {
+  if (conversation && getVisualAmount("speaking") > 0.5) {
     const output = conversation.getOutputByteFrequencyData();
     if (output && output.length) {
       let sum = 0;
@@ -389,14 +412,13 @@ function animate() {
     voiceEnergy *= 0.86;
   }
 
+  const speakingVisual = getVisualAmount("speaking");
+  const listeningVisual = getVisualAmount("listening");
+  const thinkingVisual = getVisualAmount("thinking");
   const targetEnergy =
-    currentState === "speaking"
-      ? 0.30 + Math.min(0.42, voiceEnergy / 170)
-      : currentState === "listening"
-        ? 0.07
-        : currentState === "thinking"
-          ? 0.12
-          : 0.0;
+    speakingVisual * (0.30 + Math.min(0.42, voiceEnergy / 170)) +
+    listeningVisual * 0.07 +
+    thinkingVisual * 0.12;
 
   orbMaterial.uniforms.uEnergy.value +=
     (targetEnergy - orbMaterial.uniforms.uEnergy.value) * 0.06;
