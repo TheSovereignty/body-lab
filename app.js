@@ -10,7 +10,7 @@ let stateIndex = 0;
 let currentState = "resting";
 let previousState = "resting";
 let stateTransition = 1;
-const stateTransitionDuration = 1.15;
+const stateTransitionDuration = 2.4;
 let returnTimer;
 let conversation = null;
 let conversationStatus = "disconnected";
