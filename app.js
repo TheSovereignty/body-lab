@@ -115,11 +115,11 @@ root.add(halo);
 // They live outside the orb's body and carry the same localized vibration,
 // while their overall scale breathes with the ORB.
 const ringGroups = [
-  makeRing(1.34, 0.82, 0.10, 0.72),
-  makeRing(1.50, 0.94, 0.08, 0.44)
+  makeRing(1.18, 0.10, 0.72),
+  makeRing(1.30, 0.08, 0.44)
 ];
 
-function makeRing(radiusX, radiusY, z, baseOpacity) {
+function makeRing(radius, z, baseOpacity) {
   const count = 512;
   const positions = new Float32Array(count * 3);
   const geometry = new THREE.BufferGeometry();
@@ -135,13 +135,13 @@ function makeRing(radiusX, radiusY, z, baseOpacity) {
 
   const line = new THREE.LineLoop(geometry, material);
   line.renderOrder = 10;
-  line.userData = { count, radiusX, radiusY, z, baseOpacity };
+  line.userData = { count, radius, z, baseOpacity };
   root.add(line);
   return line;
 }
 
 function updateRing(line, time, ringIndex) {
-  const { count, radiusX, radiusY, z, baseOpacity } = line.userData;
+  const { count, radius, z, baseOpacity } = line.userData;
   const positions = line.geometry.attributes.position.array;
   const speaking = currentState === "speaking";
 
@@ -163,8 +163,8 @@ function updateRing(line, time, ringIndex) {
     const secondary = Math.sin(delta * 14.0 + time * 7.0) * packet * strength * 0.16;
     const r = 1.0 + wave + secondary;
 
-    positions[i * 3] = Math.cos(a) * radiusX * r;
-    positions[i * 3 + 1] = Math.sin(a) * radiusY * r;
+    positions[i * 3] = Math.cos(a) * radius * r;
+    positions[i * 3 + 1] = Math.sin(a) * radius * r;
     positions[i * 3 + 2] = z;
   }
 
