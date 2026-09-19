@@ -56,8 +56,8 @@ const fragmentShader = `
     // The focal light is part of the sphere's color field, never a separate object.
     vec3 focus = normalize(uFocus);
     float focusDot = max(dot(n, focus), 0.0);
-    float goldField = pow(focusDot, 18.0);
-    float goldHalo = pow(focusDot, 4.5);
+    float goldField = pow(focusDot, 13.0);
+    float goldHalo = pow(focusDot, 3.6);
 
     float rim = pow(1.0 - max(dot(n, vec3(0.0, 0.0, 1.0)), 0.0), 2.0);
     float softDrift = 0.5 + 0.5 * sin(uTime * 0.22 + vPosition.y * 2.1);
@@ -75,7 +75,7 @@ const fragmentShader = `
 
     float facing = max(dot(n, vec3(-0.18, 0.22, 0.96)), 0.0);
     float surface = 0.72 + 0.38 * facing;
-    float brightness = surface * (1.10 + uEnergy * 0.38 + uBreath * 0.10);
+    float brightness = surface * (1.10 + uEnergy * 0.72 + uBreath * 0.10);
 
     gl_FragColor = vec4(body * brightness, 1.0);
   }
@@ -141,14 +141,14 @@ function updateRing(line, time, ringIndex) {
   const speaking = currentState === "speaking";
   const wavePhase = time * (1.15 + ringIndex * 0.22) + ringIndex * 2.6;
   const packetCenter = ((wavePhase % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-  const strength = speaking ? (0.016 + 0.022 * (0.5 + 0.5 * Math.sin(time * 4.7 + ringIndex))) : 0;
+  const strength = speaking ? (0.020 + 0.018 * (0.5 + 0.5 * Math.sin(time * 4.7 + ringIndex))) : 0;
 
   for (let i = 0; i < count; i++) {
     const a = (i / count) * Math.PI * 2;
     let delta = Math.atan2(Math.sin(a - packetCenter), Math.cos(a - packetCenter));
-    let packet = Math.exp(-(delta * delta) / 0.075);
-    let wave = Math.sin(delta * 16.0 - time * 9.0) * packet * strength;
-    let secondary = Math.sin(delta * 7.0 + time * 5.0) * packet * strength * 0.22;
+    let packet = Math.exp(-(delta * delta) / 0.030);
+    let wave = Math.sin(delta * 30.0 - time * 12.0) * packet * strength;
+    let secondary = Math.sin(delta * 14.0 + time * 7.0) * packet * strength * 0.16;
     let r = 1.0 + wave + secondary;
 
     positions[i * 3] = Math.cos(a) * radiusX * r;
@@ -161,7 +161,7 @@ function updateRing(line, time, ringIndex) {
   const breathing = 0.5 + 0.5 * Math.sin(time * (Math.PI * 2 / 7) + ringIndex * 0.38);
   const targetOpacity = baseOpacity * (0.82 + breathing * 0.22);
   line.material.opacity = speaking
-    ? targetOpacity + 0.035
+    ? targetOpacity + 0.08
     : targetOpacity;
 }
 
