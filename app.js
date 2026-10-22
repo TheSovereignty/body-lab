@@ -236,6 +236,7 @@ function focusForState(time) {
 }
 
 let stateStarted = 0;
+let previousFrameTime = 0;
 
 function smoothstep(t) {
   return t * t * (3 - 2 * t);
@@ -263,6 +264,10 @@ function getSpeakingVisualAmount(time) {
 }
 
 function setState(next) {
+  // Ignore duplicate voice/status events. Repeated events must not restart
+  // the transition clock or the Returning timer.
+  if (next === currentState && button.dataset.state === next) return;
+
   clearTimeout(returnTimer);
   if (next !== currentState) {
     // Listening → speaking is a continuous arrival, not a new state animation.
@@ -395,10 +400,20 @@ function animate() {
   requestAnimationFrame(animate);
 
   const time = clock.getElapsedTime();
+  // Advance transitions using elapsed time, not an assumed 60 FPS. This keeps
+  // motion consistent on mobile Safari when the frame rate changes.
+  const delta = previousFrameTime === 0
+    ? 1 / 60
+    : Math.min(0.05, Math.max(0, time - previousFrameTime));
+  previousFrameTime = time;
+
   const breath = 0.5 + 0.5 * Math.sin(time * (Math.PI * 2 / 7) - Math.PI / 2);
 
   if (stateTransition < stateTransitionDuration) {
-    stateTransition += 1 / 60;
+    stateTransition = Math.min(
+      stateTransitionDuration,
+      stateTransition + delta
+    );
   }
 
   // Physical body: one breathing volume, not layered DOM circles.
@@ -411,7 +426,9 @@ function animate() {
   root.scale.setScalar(scale);
 
   const targetFocus = focusForState(time);
-  const focusLerp = currentState === "speaking" && previousState !== "listening" ? 0.028 : 0.045;
+  const focusTimeConstant =
+    currentState === "speaking" && previousState !== "listening" ? 0.58 : 0.36;
+  const focusLerp = 1 - Math.exp(-delta / focusTimeConstant);
   orbMaterial.uniforms.uFocus.value.lerp(targetFocus, focusLerp);
 
   if (conversation && speakingAmount > 0.5) {
@@ -422,7 +439,8 @@ function animate() {
         sum += output[i] * output[i];
       }
       const rms = Math.sqrt(sum / output.length);
-      voiceEnergy += (rms - voiceEnergy) * 0.28;
+      const audioSmoothing = 1 - Math.exp(-delta / 0.05);
+      voiceEnergy += (rms - voiceEnergy) * audioSmoothing;
     }
   } else {
     voiceEnergy *= 0.86;
@@ -438,8 +456,9 @@ function animate() {
     listeningVisual * 0.07 +
     thinkingVisual * 0.12;
 
+  const energySmoothing = 1 - Math.exp(-delta / 0.27);
   orbMaterial.uniforms.uEnergy.value +=
-    (targetEnergy - orbMaterial.uniforms.uEnergy.value) * 0.06;
+    (targetEnergy - orbMaterial.uniforms.uEnergy.value) * energySmoothing;
   orbMaterial.uniforms.uBreath.value = breath;
   orbMaterial.uniforms.uTime.value = time;
 
