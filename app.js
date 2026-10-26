@@ -10,8 +10,7 @@ let stateIndex = 0;
 let currentState = "resting";
 let previousState = "resting";
 let stateTransition = 1;
-const stateTransitionDuration = 2.4;
-const speakingEntranceDuration = 1.8;
+const stateTransitionDuration = 1.65;
 let returnTimer;
 let conversation = null;
 let conversationStatus = "disconnected";
@@ -200,7 +199,7 @@ function updateRing(line, time, ringIndex) {
     getVisualValue("speaking", 0.12) +
     getVisualValue("returning", 0.055);
 
-  const speakingAmount = getSpeakingVisualAmount(time);
+  const speakingAmount = getSpeakingVisualAmount();
   const ringScale =
     1.0 +
     stateExpansion +
@@ -252,25 +251,20 @@ function getVisualValue(state, value) {
   return value * getVisualAmount(state);
 }
 
-function getSpeakingVisualAmount(time) {
-  if (currentState === "speaking" && previousState === "listening") {
-    return smoothstep(Math.min(1, (time - stateStarted) / speakingEntranceDuration));
-  }
-  if (currentState === "speaking") {
-    return getVisualAmount("speaking");
-  }
-  return 0;
+function getSpeakingVisualAmount() {
+  // Speaking is one side of the same crossfade as listening/returning.
+  // This also lets speaking fade OUT smoothly instead of disappearing on mode change.
+  return getVisualAmount("speaking");
 }
 
 function setState(next) {
   clearTimeout(returnTimer);
   if (next !== currentState) {
-    // Listening → speaking is a continuous arrival, not a new state animation.
-    // Keep the listening visual in place while speaking-specific behavior eases in.
-    if (currentState !== "listening" || next !== "speaking") {
-      previousState = currentState;
-      stateTransition = 0;
-    }
+    // Every state change starts from the state currently on screen.
+    // The outgoing and incoming states crossfade together, including
+    // listening ↔ speaking, so no visual layer snaps off at the mode callback.
+    previousState = currentState;
+    stateTransition = 0;
   }
   currentState = next;
   stateIndex = states.indexOf(next);
@@ -429,9 +423,7 @@ function animate() {
   }
 
   const speakingVisual = speakingAmount;
-  const listeningVisual = currentState === "speaking" && previousState === "listening"
-    ? 1
-    : getVisualAmount("listening");
+  const listeningVisual = getVisualAmount("listening");
   const thinkingVisual = getVisualAmount("thinking");
   const targetEnergy =
     speakingVisual * (0.30 + Math.min(0.42, voiceEnergy / 170)) +
